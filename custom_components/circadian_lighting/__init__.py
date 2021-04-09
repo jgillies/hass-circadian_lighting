@@ -26,27 +26,24 @@ Technical notes: I had to make a lot of assumptions when writing this app
     *   The component doesn't calculate a true "Blue Hour" -- it just sets the
         lights to 2700K (warm white) until your hub goes into Night mode
 """
-
 import logging
 
-import voluptuous as vol
+from datetime import datetime, timedelta
 
+import voluptuous as vol
 import homeassistant.helpers.config_validation as cv
-from homeassistant.components.light import (
-    VALID_TRANSITION, ATTR_TRANSITION)
-from homeassistant.const import (
-    CONF_LATITUDE, CONF_LONGITUDE, CONF_ELEVATION,
-    SUN_EVENT_SUNRISE, SUN_EVENT_SUNSET)
+
 from homeassistant.util import Throttle
+from homeassistant.util.dt import get_time_zone, now as dt_now
+from homeassistant.util.color import (color_RGB_to_xy,
+                                      color_temperature_to_rgb, color_xy_to_hs)
+from homeassistant.const import (CONF_ELEVATION, CONF_LATITUDE, CONF_LONGITUDE,
+                                 SUN_EVENT_SUNRISE, SUN_EVENT_SUNSET)
+from homeassistant.helpers.event import (track_sunrise, track_sunset,
+                                         track_time_change)
 from homeassistant.helpers.discovery import load_platform
 from homeassistant.helpers.dispatcher import dispatcher_send
-from homeassistant.helpers.event import track_sunrise, track_sunset, track_time_change
-from homeassistant.util.color import (
-    color_temperature_to_rgb, color_RGB_to_xy,
-    color_xy_to_hs)
-from homeassistant.util.dt import now as dt_now, get_time_zone
-
-from datetime import datetime, timedelta
+from homeassistant.components.light import ATTR_TRANSITION, VALID_TRANSITION
 
 VERSION = '1.0.13'
 
@@ -155,6 +152,7 @@ class CircadianLighting(object):
 
     def get_timezone(self):
         from timezonefinder import TimezoneFinder
+
         tf = TimezoneFinder()
         timezone_string = tf.timezone_at(lng=self.data['longitude'], lat=self.data['latitude'])
         timezone = get_time_zone(timezone_string)
@@ -171,7 +169,8 @@ class CircadianLighting(object):
             solar_midnight = sunset + ((sunrise + timedelta(days=1)) - sunset)/2
         else:
             import astral
-            location = astral.Location()
+
+            location = astral.LocationInfo()
             location.name = 'name'
             location.region = 'region'
             location.latitude = self.data['latitude']
