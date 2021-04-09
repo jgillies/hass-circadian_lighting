@@ -33,6 +33,8 @@ from datetime import datetime, timedelta
 import voluptuous as vol
 import homeassistant.helpers.config_validation as cv
 
+from timezonefinder import TimezoneFinder
+
 from homeassistant.util import Throttle
 from homeassistant.util.dt import get_time_zone, now as dt_now
 from homeassistant.util.color import (color_RGB_to_xy,
@@ -151,7 +153,6 @@ class CircadianLighting(object):
             track_sunset(self.hass, self._update, self.data['sunset_offset'])
 
     def get_timezone(self):
-        from timezonefinder import TimezoneFinder
 
         tf = TimezoneFinder()
         timezone_string = tf.timezone_at(lng=self.data['longitude'], lat=self.data['latitude'])
@@ -170,7 +171,7 @@ class CircadianLighting(object):
         else:
             import astral
 
-            from astral.sun import midnight, sun
+            from astral.sun import midnight, noon, sun
 
             location = astral.LocationInfo()
             location.name = 'name'
@@ -179,7 +180,7 @@ class CircadianLighting(object):
             location.longitude = self.data['longitude']
             location.elevation = self.data['elevation']
             location.timezone = self.data['timezone']
-            sun = sun(location.observer, date, self.data['timezone'])
+            sun = sun(location.observer, date, 6.0, location.timezone)
             _LOGGER.debug("Astral location: " + str(location))
             if self.data['sunrise_time'] is not None:
                 if date is None:
@@ -193,8 +194,8 @@ class CircadianLighting(object):
                 sunset = date.replace(hour=int(self.data['sunset_time'].strftime("%H")), minute=int(self.data['sunset_time'].strftime("%M")), second=int(self.data['sunset_time'].strftime("%S")), microsecond=int(self.data['sunset_time'].strftime("%f")))
             else:
                 sunset = sun['sunset']
-            solar_noon = location.solar_noon(date)
-            solar_midnight = midnight(location.observer, date, self.data['timezone'])
+            solar_noon = noon(location.observer, date, location.timezone)
+            solar_midnight = midnight(location.observer, date, location.timezone)
         if self.data['sunrise_offset'] is not None:
             sunrise = sunrise + self.data['sunrise_offset']
         if self.data['sunset_offset'] is not None:
