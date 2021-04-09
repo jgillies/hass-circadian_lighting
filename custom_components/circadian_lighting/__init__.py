@@ -170,27 +170,31 @@ class CircadianLighting(object):
         else:
             import astral
 
+            from astral.sun import midnight, sun
+
             location = astral.LocationInfo()
             location.name = 'name'
             location.region = 'region'
             location.latitude = self.data['latitude']
             location.longitude = self.data['longitude']
             location.elevation = self.data['elevation']
+            location.timezone = self.data['timezone']
+            sun = sun(location.observer, date, self.data['timezone'])
             _LOGGER.debug("Astral location: " + str(location))
             if self.data['sunrise_time'] is not None:
                 if date is None:
                     date = dt_now(self.data['timezone'])
                 sunrise = date.replace(hour=int(self.data['sunrise_time'].strftime("%H")), minute=int(self.data['sunrise_time'].strftime("%M")), second=int(self.data['sunrise_time'].strftime("%S")), microsecond=int(self.data['sunrise_time'].strftime("%f")))
             else:
-                sunrise = location.sunrise(date)
+                sunrise = sun['sunrise']
             if self.data['sunset_time'] is not None:
                 if date is None:
                     date = dt_now(self.data['timezone'])
                 sunset = date.replace(hour=int(self.data['sunset_time'].strftime("%H")), minute=int(self.data['sunset_time'].strftime("%M")), second=int(self.data['sunset_time'].strftime("%S")), microsecond=int(self.data['sunset_time'].strftime("%f")))
             else:
-                sunset = location.sunset(date)
+                sunset = sun['sunset']
             solar_noon = location.solar_noon(date)
-            solar_midnight = location.solar_midnight(date)
+            solar_midnight = midnight(location.observer, date, self.data['timezone'])
         if self.data['sunrise_offset'] is not None:
             sunrise = sunrise + self.data['sunrise_offset']
         if self.data['sunset_offset'] is not None:
